@@ -6,7 +6,7 @@ Looks for duplicate files in <copy> matching files in <source>.  If a file
 matches, will print the file in <copy>.
 
 # Author
-[Bivio](http://bivio.biz "Bivio Software, Inc.")
+[Bivio Software](http://bivio.biz "Bivio Software, Inc.")
 
 # License
 The MIT License (MIT)
