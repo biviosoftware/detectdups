@@ -4,23 +4,17 @@ import inspect
 import os
 import string
 import sys
+import re
+
+if len(sys.argv) != 3:
+    sys.exit('search orig_dir dup_dir')
+
+orig_dir = sys.argv[1]
+dup_dir = sys.argv[2]
 
 def d(*args):
     print str(inspect.currentframe().f_back.f_lineno) + ':', \
         ' '.join(str(x) for x in args)
-
-def detect(orig, check):
-    res = list()
-    for k in check.keys():
-        if k in orig:
-            res.extend(check[k])
-    return res
-
-def full_hash(files):
-    map = collections.defaultdict(list)
-    for f in files:
-        map[hash_file(f, False)].append(f)
-    return map
 
 def hash_file(fname, only_head):
     f = open(fname, 'rb')
@@ -34,26 +28,34 @@ def hash_file(fname, only_head):
     f.close()
     return h.digest()
 
+def _move_dup(dup):
+    new = os.path.join(dup_dir, re.sub(r'/', '_', dup))
+    if os.path.isfile(new):
+        print(new + ': exists')
+        raise ValueError(dup)
+    os.rename(dup, new)
+
 def walk(topdir):
-    map = collections.defaultdict(list)
+    partial = {}
+    have_full = {}
+    full = {}
     for root, dirs, files in os.walk(topdir):
         for fn in files:
             n = os.path.join(root, fn)
             h = hash_file(n, True)
-            map[h].append(n)
-    return map
+            if h not in partial:
+                partial[h] = n
+                continue
+            hf = hash_file(n, False)
+            have_full[n] = hf
+            o = partial[h]
+            if o not in have_full:
+                of = hash_file(o, False)
+                have_full[o] = of
+                full[of] = o
+            if hf in full:
+                _move_dup(n)
+            else:
+                full[hf] = n
 
-if len(sys.argv) != 3:
-    sys.exit('seach orig_dir dup_dir')
-
-orig = walk(sys.argv[1])
-check = walk(sys.argv[2])
-
-dup = list()
-for k in check.keys():
-    if k in orig:
-        dup.extend(detect(full_hash(orig[k]), full_hash(check[k])))
-
-dup.sort();
-for f in dup:
-    print(f)
+walk(orig_dir)
